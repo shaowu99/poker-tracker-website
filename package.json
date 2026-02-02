@@ -1,0 +1,14 @@
+{
+  "name": "poker-tracker-website",
+  "version": "1.0.0",
+  "description": "Poker tracker website for analyzing player statistics",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.58.1",
+    "@supabase/supabase-js": "^2.45.4"
+  }
+}

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>玩家数据分析 - 扑克数据追踪器</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>♠️</text></svg>">
+</head>
+<body class="bg-gradient-to-br from-gray-900 to-gray-800 min-h-screen text-gray-100">
+    <!-- 导航栏 -->
+    <nav class="bg-gray-800 border-b border-gray-700 sticky top-0 z-40">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="index.html" class="flex items-center hover:opacity-80 transition-opacity">
+                        <span class="text-2xl mr-2">♠️</span>
+                        <span class="font-bold text-xl">扑克数据追踪器</span>
+                    </a>
+                    <div class="ml-6 text-gray-400">
+                        <span id="playerName" class="font-bold text-white"></span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button 
+                        onclick="refreshData()"
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center"
+                    >
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        刷新数据
+                    </button>
+                    <a 
+                        href="index.html"
+                        class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                    >
+                        返回搜索
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <div class="container mx-auto px-4 py-8">
+        <!-- 玩家数据容器 -->
+        <div id="playerDataContainer" class="max-w-6xl mx-auto">
+            <!-- 数据将通过JS动态填充 -->
+        </div>
+        
+        <!-- 位置统计数据容器 -->
+        <div id="positionStatsContainer" class="max-w-6xl mx-auto">
+            <!-- 位置数据将通过JS动态填充 -->
+        </div>
+        
+        <!-- 最近手牌容器 -->
+        <div id="recentHandsContainer" class="max-w-6xl mx-auto">
+            <!-- 手牌数据将通过JS动态填充 -->
+        </div>
+        
+        <!-- 数据说明 -->
+        <div class="max-w-6xl mx-auto mt-12">
+            <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+                <h3 class="text-xl font-bold mb-4">数据说明</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <h4 class="font-bold mb-2 text-blue-400">VPIP (Voluntarily Put $ In Pot)</h4>
+                        <p class="text-gray-400 text-sm">玩家自愿投入底池的频率，反映玩牌的松紧程度。</p>
+                        <div class="mt-2">
+                            <span class="text-xs px-2 py-1 bg-blue-900 rounded">≤18% 偏紧</span>
+                            <span class="text-xs px-2 py-1 bg-green-900 rounded ml-1">18-25% 正常</span>
+                            <span class="text-xs px-2 py-1 bg-red-900 rounded ml-1">≥25% 偏松</span>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold mb-2 text-green-400">PFR (Pre-Flop Raise)</h4>
+                        <p class="text-gray-400 text-sm">玩家翻前加注的频率，反映翻前攻击性。</p>
+                        <div class="mt-2">
+                            <span class="text-xs px-2 py-1 bg-blue-900 rounded">≤12% 偏被动</span>
+                            <span class="text-xs px-2 py-1 bg-green-900 rounded ml-1">12-18% 正常</span>
+                            <span class="text-xs px-2 py-1 bg-red-900 rounded ml-1">≥18% 偏激进</span>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold mb-2 text-purple-400">3Bet (Three-Bet)</h4>
+                        <p class="text-gray-400 text-sm">玩家进行三次下注的频率，反映对抗加注时的攻击性。</p>
+                        <div class="mt-2">
+                            <span class="text-xs px-2 py-1 bg-blue-900 rounded">≤4% 偏弱</span>
+                            <span class="text-xs px-2 py-1 bg-green-900 rounded ml-1">4-8% 正常</span>
+                            <span class="text-xs px-2 py-1 bg-red-900 rounded ml-1">≥8% 偏激进</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载遮罩 -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p class="text-xl">加载数据中...</p>
+            <p class="text-gray-400 text-sm mt-2" id="loadingMessage">正在查询玩家信息</p>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="mt-12 py-6 border-t border-gray-700">
+        <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
+            <p>数据来自 Supabase 数据库 | 最后更新: <span id="lastUpdateTime"></span></p>
+            <p class="mt-2">© 2024 扑克数据追踪器 | 仅供数据分析使用</p>
+        </div>
+    </footer>
+
+    <!-- 脚本 -->
+    <script src="lib/supabase.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/cache-manager.js"></script>
+    <script src="js/app.js"></script>
+    
+    <script>
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            await window.initPlayerPage();
+            
+            // 更新页脚时间
+            document.getElementById('lastUpdateTime').textContent = 
+                new Date().toLocaleString('zh-CN');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+-- 1. 玩家表：核心实体，存储玩家唯一身份
+CREATE TABLE players (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+COMMENT ON TABLE players IS '存储所有扑克玩家的基本信息，用户名唯一。';
+
+-- 2. 牌桌表：独立牌桌信息，消除盲注级别冗余
+CREATE TABLE poker_tables (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  table_name TEXT NOT NULL,
+  blinds TEXT NOT NULL, -- 如 '0.5/1', '1/2'
+  max_seats INTEGER DEFAULT 9,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(table_name, blinds) -- 同一名称同一盲注视为同一牌桌
+);
+COMMENT ON TABLE poker_tables IS '记录牌桌的固定属性，避免在每手牌中重复存储盲注信息。';
+
+-- 3. 牌局总表：记录每一手牌的全局信息，并关联到具体牌桌
+CREATE TABLE games (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  hand_id TEXT UNIQUE, -- 来自扑克平台的原始手牌ID，用于防止重复导入
+  table_id UUID NOT NULL REFERENCES poker_tables(id) ON DELETE CASCADE,
+  button_seat INTEGER, -- 按钮所在的座位号（0-8）
+  total_pot DECIMAL(12, 2) DEFAULT 0, -- 该手牌的总底池
+  played_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+COMMENT ON TABLE games IS '每一手牌的主记录，通过table_id关联到具体的牌桌。';
+CREATE INDEX idx_games_table_id ON games(table_id);
+
+-- 4. 玩家位置与结果表：核心创新！记录玩家在每手牌中的位置和直接输赢结果
+CREATE TABLE player_positions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  seat_number INTEGER NOT NULL CHECK (seat_number BETWEEN 0 AND 8),
+  position TEXT NOT NULL CHECK (position IN ('UTG', 'UTG+1', 'MP', 'HJ', 'CO', 'BTN', 'SB', 'BB')),
+  net_result DECIMAL(12, 2) NOT NULL DEFAULT 0, -- 该手牌的净输赢（正=赢，负=输）
+  is_winner BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(game_id, player_id), -- 确保一手牌中同一玩家只有一条记录
+  UNIQUE(game_id, seat_number) -- 确保一手牌中同一座位只分配一次
+);
+COMMENT ON TABLE player_positions IS '记录玩家在每手牌中的座位、位置和最终财务结果，是位置分析和输赢统计的基石。';
+CREATE INDEX idx_player_positions_player ON player_positions(player_id);
+CREATE INDEX idx_player_positions_position ON player_positions(position);
+
+-- 5. 动作表：记录每一手牌中每个玩家的每一个决策动作
+CREATE TABLE hand_actions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  street TEXT NOT NULL CHECK (street IN ('preflop', 'flop', 'turn', 'river')),
+  action_order INTEGER NOT NULL,
+  action_type TEXT NOT NULL CHECK (action_type IN ('fold', 'check', 'call', 'bet', 'raise', 'all_in')),
+  amount DECIMAL(12, 2) DEFAULT 0,
+  is_voluntary BOOLEAN DEFAULT true, -- 用于计算VPIP等
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+COMMENT ON TABLE hand_actions IS '记录每一手牌中玩家的每一个动作，是计算VPIP、PFR、AF等统计指标的基础数据。';
+CREATE INDEX idx_hand_actions_game_street ON hand_actions(game_id, street, action_order);
+
+-- 6. 摊牌表：记录最终摊牌时的牌型和赢取金额（可作为player_positions的补充详情）
+CREATE TABLE showdowns (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  position_id UUID REFERENCES player_positions(id), -- 可选，可关联回具体的位置记录
+  hole_cards TEXT, -- 玩家的底牌，如 'AsKh'
+  final_hand TEXT, -- 最终成牌牌型
+  win_amount DECIMAL(12, 2) DEFAULT 0, -- 在摊牌中赢取的具体金额（是net_result的一部分）
+  is_winner BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+COMMENT ON TABLE showdowns IS '记录摊牌详情，是player_positions的补充，用于分析摊牌胜率、牌型等。';

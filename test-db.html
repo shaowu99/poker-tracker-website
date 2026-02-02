@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase数据库测试</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gradient-to-br from-gray-900 to-gray-800 min-h-screen text-gray-100">
+    <div class="container mx-auto px-4 py-12 max-w-4xl">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 border border-gray-700">
+            <h1 class="text-3xl font-bold mb-6 text-center">Supabase数据库测试</h1>
+            
+            <div id="testResults" class="mb-6 space-y-4">
+                <div class="p-4 rounded-lg bg-gray-700">
+                    <h3 class="font-bold mb-2">连接状态: <span id="connectionStatus">待测试</span></h3>
+                </div>
+                
+                <div class="p-4 rounded-lg bg-gray-700">
+                    <h3 class="font-bold mb-2">玩家总数: <span id="playerCount">待获取</span></h3>
+                </div>
+                
+                <div class="p-4 rounded-lg bg-gray-700">
+                    <h3 class="font-bold mb-2">手牌总数: <span id="handCount">待获取</span></h3>
+                </div>
+                
+                <div class="p-4 rounded-lg bg-gray-700">
+                    <h3 class="font-bold mb-2">位置记录数: <span id="positionCount">待获取</span></h3>
+                </div>
+                
+                <div class="p-4 rounded-lg bg-gray-700">
+                    <h3 class="font-bold mb-2">动作记录数: <span id="actionCount">待获取</span></h3>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-4 justify-center">
+                <button 
+                    id="testConnectionBtn"
+                    class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                    onclick="testConnection()"
+                >
+                    测试连接
+                </button>
+                
+                <button 
+                    id="testDataBtn"
+                    class="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                    onclick="testData()"
+                >
+                    测试数据
+                </button>
+                
+                <button 
+                    id="showConfigBtn"
+                    class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                    onclick="showConfig()"
+                >
+                    显示配置
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="lib/supabase.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script>
+        async function testConnection() {
+            const statusElement = document.getElementById('connectionStatus');
+            statusElement.textContent = '测试中...';
+            statusElement.className = 'text-yellow-400';
+            
+            try {
+                // 确保Supabase客户端可用
+                let attempts = 0;
+                const maxAttempts = 50;
+                while ((!window.supabaseClient || typeof window.supabaseClient.ensureSupabase !== 'function') && attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                if (!window.supabaseClient || typeof window.supabaseClient.ensureSupabase !== 'function') {
+                    throw new Error('Supabase客户端未能初始化');
+                }
+                
+                const success = await window.supabaseClient.testConnection();
+                
+                if (success) {
+                    statusElement.textContent = '连接成功';
+                    statusElement.className = 'text-green-400';
+                } else {
+                    statusElement.textContent = '连接失败';
+                    statusElement.className = 'text-red-400';
+                }
+            } catch (error) {
+                console.error('连接测试错误:', error);
+                statusElement.textContent = `连接失败: ${error.message}`;
+                statusElement.className = 'text-red-400';
+            }
+        }
+        
+        async function testData() {
+            try {
+                // 确保Supabase客户端可用
+                let attempts = 0;
+                const maxAttempts = 50;
+                while ((!window.supabaseClient || typeof window.supabaseClient.ensureSupabase !== 'function') && attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                if (!window.supabaseClient || typeof window.supabaseClient.ensureSupabase !== 'function') {
+                    throw new Error('Supabase客户端未能初始化');
+                }
+                
+                // 确保Supabase已初始化
+                const client = await window.supabaseClient.ensureSupabase();
+                
+                // 测试各个表的数据
+                const playerCount = await client.from('players').select('count', { count: 'exact', head: true });
+                const handCount = await client.from('games').select('count', { count: 'exact', head: true });
+                const positionCount = await client.from('player_positions').select('count', { count: 'exact', head: true });
+                const actionCount = await client.from('hand_actions').select('count', { count: 'exact', head: true });
+                
+                // 更新UI
+                document.getElementById('playerCount').textContent = playerCount.count || 0;
+                document.getElementById('handCount').textContent = handCount.count || 0;
+                document.getElementById('positionCount').textContent = positionCount.count || 0;
+                document.getElementById('actionCount').textContent = actionCount.count || 0;
+                
+            } catch (error) {
+                console.error('测试数据错误:', error);
+                alert(`测试数据失败: ${error.message}`);
+            }
+        }
+        
+        function showConfig() {
+            const config = {
+                url: 'https://pvylhbtftbgyoqemnfke.supabase.co',
+                anonKey: 'sb_publishable_fWnKwBxnkUsDINXEfQV6ow_NgEhZcjD'
+            };
+            
+            alert(`Supabase配置:\nURL: ${config.url}\nAnon Key: ${config.anonKey}`);
+            console.log('Supabase配置:', config);
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('页面加载完成，等待Supabase初始化...');
+        });
+    </script>
+</body>
+</html>
