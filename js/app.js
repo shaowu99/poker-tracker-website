@@ -1247,3 +1247,84 @@ async function updatePlayerStats() {
 window.initPlayerPage = initPlayerPage;
 window.refreshData = refreshData;
 window.updatePlayerStats = updatePlayerStats;
+
+// 移动端优化：处理触摸事件和屏幕尺寸变化
+document.addEventListener('DOMContentLoaded', function() {
+    // 检测是否为移动设备
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+        // 为移动端添加触摸友好的样式
+        document.body.classList.add('mobile-device');
+        
+        // 优化输入框聚焦时的页面缩放
+        const inputs = document.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                // 防止iOS Safari在输入时放大页面
+                if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
+                    const viewport = document.querySelector('meta[name="viewport"]');
+                    if (viewport) {
+                        viewport.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1');
+                    }
+                }
+            });
+            
+            input.addEventListener('blur', function() {
+                // 恢复正常缩放比例
+                const viewport = document.querySelector('meta[name="viewport"]');
+                if (viewport) {
+                    viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+                }
+            });
+        });
+    }
+    
+    // 监听屏幕尺寸变化，响应式调整
+    window.addEventListener('resize', function() {
+        const screenWidth = window.innerWidth;
+        if (screenWidth <= 768) {
+            // 移动端优化
+            document.body.classList.add('mobile-view');
+            document.body.classList.remove('desktop-view');
+        } else {
+            // 桌面端视图
+            document.body.classList.add('desktop-view');
+            document.body.classList.remove('mobile-view');
+        }
+    });
+    
+    // 初始化时检查屏幕尺寸
+    window.dispatchEvent(new Event('resize'));
+});
+
+// 添加移动端友好的提示功能
+function showToast(message, type = 'success', duration = 3000) {
+    // 检查是否已有toast，避免重复
+    const existingToast = document.querySelector('.toast-notification');
+    if (existingToast) {
+        existingToast.remove();
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = `toast-notification fixed bottom-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-50 ${
+        type === 'success' ? 'bg-green-600' : 'bg-red-600'
+    } text-white text-center text-sm sm:text-base min-w-[200px] max-w-[90vw]`;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    // 添加淡入效果
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 300);
+    }, duration);
+}
+
+// 更新现有函数使用新的toast
+window.showToast = showToast;

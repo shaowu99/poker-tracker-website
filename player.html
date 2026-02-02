@@ -11,41 +11,44 @@
 <body class="bg-gradient-to-br from-gray-900 to-gray-800 min-h-screen text-gray-100">
     <!-- 导航栏 -->
     <nav class="bg-gray-800 border-b border-gray-700 sticky top-0 z-40">
-        <div class="container mx-auto px-4 py-4">
-            <div class="flex items-center justify-between">
+        <div class="container mx-auto px-4 py-3 sm:py-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
                 <div class="flex items-center">
                     <a href="index.html" class="flex items-center hover:opacity-80 transition-opacity">
-                        <span class="text-2xl mr-2">♠️</span>
-                        <span class="font-bold text-xl">扑克数据追踪器</span>
+                        <span class="text-xl sm:text-2xl mr-2">♠️</span>
+                        <span class="font-bold text-lg sm:text-xl">扑克数据追踪器</span>
                     </a>
-                    <div class="ml-6 text-gray-400">
-                        <span id="playerName" class="font-bold text-white"></span>
+                    <div class="ml-0 sm:ml-6 mt-1 sm:mt-0 text-gray-400">
+                        <span id="playerName" class="font-bold text-white text-sm sm:text-base"></span>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
+                <div class="flex flex-wrap justify-center sm:justify-end gap-2 sm:gap-3">
                     <button 
                         onclick="refreshData()"
-                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center"
+                        class="px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center text-xs sm:text-sm"
                     >
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                         </svg>
-                        刷新数据
+                        <span class="hidden sm:inline">刷新数据</span>
+                        <span class="sm:hidden">刷新</span>
                     </button>
                     <button 
                         onclick="updatePlayerStats()"
-                        class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors flex items-center"
+                        class="px-3 py-2 sm:px-4 sm:py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors flex items-center text-xs sm:text-sm"
                     >
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
-                        更新统计
+                        <span class="hidden sm:inline">更新统计</span>
+                        <span class="sm:hidden">更新</span>
                     </button>
                     <a 
                         href="index.html"
-                        class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                        class="px-3 py-2 sm:px-4 sm:py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-xs sm:text-sm"
                     >
-                        返回搜索
+                        <span class="hidden sm:inline">返回搜索</span>
+                        <span class="sm:hidden">返回</span>
                     </a>
                 </div>
             </div>
@@ -53,7 +56,7 @@
     </nav>
 
     <!-- 主要内容 -->
-    <div class="container mx-auto px-4 py-8">
+    <div class="container mx-auto px-4 py-6 sm:py-8">
         <!-- 玩家数据容器 -->
         <div id="playerDataContainer" class="max-w-6xl mx-auto">
             <!-- 数据将通过JS动态填充 -->
@@ -70,35 +73,35 @@
         </div>
         
         <!-- 数据说明 -->
-        <div class="max-w-6xl mx-auto mt-12">
-            <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
-                <h3 class="text-xl font-bold mb-4">数据说明</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="max-w-6xl mx-auto mt-8 sm:mt-12">
+            <div class="bg-gray-800 rounded-2xl p-4 sm:p-6 border border-gray-700">
+                <h3 class="text-lg sm:text-xl font-bold mb-3 sm:mb-4">数据说明</h3>
+                <div class="grid grid-cols-1 gap-4 sm:gap-6">
                     <div>
-                        <h4 class="font-bold mb-2 text-blue-400">VPIP (Voluntarily Put $ In Pot)</h4>
-                        <p class="text-gray-400 text-sm">玩家自愿投入底池的频率，反映玩牌的松紧程度。</p>
-                        <div class="mt-2">
+                        <h4 class="font-bold mb-2 text-blue-400 text-sm sm:text-base">VPIP (Voluntarily Put $ In Pot)</h4>
+                        <p class="text-gray-400 text-xs sm:text-sm">玩家自愿投入底池的频率，反映玩牌的松紧程度。</p>
+                        <div class="mt-2 flex flex-wrap gap-1">
                             <span class="text-xs px-2 py-1 bg-blue-900 rounded">≤18% 偏紧</span>
-                            <span class="text-xs px-2 py-1 bg-green-900 rounded ml-1">18-25% 正常</span>
-                            <span class="text-xs px-2 py-1 bg-red-900 rounded ml-1">≥25% 偏松</span>
+                            <span class="text-xs px-2 py-1 bg-green-900 rounded">18-25% 正常</span>
+                            <span class="text-xs px-2 py-1 bg-red-900 rounded">≥25% 偏松</span>
                         </div>
                     </div>
                     <div>
-                        <h4 class="font-bold mb-2 text-green-400">PFR (Pre-Flop Raise)</h4>
-                        <p class="text-gray-400 text-sm">玩家翻前加注的频率，反映翻前攻击性。</p>
-                        <div class="mt-2">
+                        <h4 class="font-bold mb-2 text-green-400 text-sm sm:text-base">PFR (Pre-Flop Raise)</h4>
+                        <p class="text-gray-400 text-xs sm:text-sm">玩家翻前加注的频率，反映翻前攻击性。</p>
+                        <div class="mt-2 flex flex-wrap gap-1">
                             <span class="text-xs px-2 py-1 bg-blue-900 rounded">≤12% 偏被动</span>
-                            <span class="text-xs px-2 py-1 bg-green-900 rounded ml-1">12-18% 正常</span>
-                            <span class="text-xs px-2 py-1 bg-red-900 rounded ml-1">≥18% 偏激进</span>
+                            <span class="text-xs px-2 py-1 bg-green-900 rounded">12-18% 正常</span>
+                            <span class="text-xs px-2 py-1 bg-red-900 rounded">≥18% 偏激进</span>
                         </div>
                     </div>
                     <div>
-                        <h4 class="font-bold mb-2 text-purple-400">3Bet (Three-Bet)</h4>
-                        <p class="text-gray-400 text-sm">玩家进行三次下注的频率，反映对抗加注时的攻击性。</p>
-                        <div class="mt-2">
+                        <h4 class="font-bold mb-2 text-purple-400 text-sm sm:text-base">3Bet (Three-Bet)</h4>
+                        <p class="text-gray-400 text-xs sm:text-sm">玩家进行三次下注的频率，反映对抗加注时的攻击性。</p>
+                        <div class="mt-2 flex flex-wrap gap-1">
                             <span class="text-xs px-2 py-1 bg-blue-900 rounded">≤4% 偏弱</span>
-                            <span class="text-xs px-2 py-1 bg-green-900 rounded ml-1">4-8% 正常</span>
-                            <span class="text-xs px-2 py-1 bg-red-900 rounded ml-1">≥8% 偏激进</span>
+                            <span class="text-xs px-2 py-1 bg-green-900 rounded">4-8% 正常</span>
+                            <span class="text-xs px-2 py-1 bg-red-900 rounded">≥8% 偏激进</span>
                         </div>
                     </div>
                 </div>

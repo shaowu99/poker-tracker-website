@@ -63,15 +63,43 @@ table tr {
     font-variant-numeric: tabular-nums;
 }
 
-/* 响应式表格 */
+/* 响应式表格优化 */
 @media (max-width: 768px) {
     .table-responsive {
-        font-size: 0.875rem;
+        font-size: 0.75rem;
     }
     
     .table-responsive td,
     .table-responsive th {
-        padding: 0.5rem;
+        padding: 0.25rem;
+    }
+    
+    /* 移动端表格滚动 */
+    .mobile-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* 移动端优化的表格 */
+    .mobile-table th,
+    .mobile-table td {
+        padding: 0.5rem 0.25rem !important;
+    }
+}
+
+/* 移动端触控优化 */
+@media (max-width: 768px) {
+    .touch-target {
+        min-height: 44px; /* iOS推荐的最小触控目标尺寸 */
+        min-width: 44px;
+        padding: 12px !important;
+    }
+    
+    button, a, input, select {
+        /* 确保触控目标足够大 */
+        min-height: 44px;
+        padding-top: 10px;
+        padding-bottom: 10px;
     }
 }
 
@@ -133,4 +161,33 @@ table tr {
 @keyframes skeleton-loading {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
+}
+
+/* 移动端优化 - 手牌范围网格 */
+@media (max-width: 768px) {
+    .hand-range-container {
+        transform: scale(0.8);
+        transform-origin: top left;
+        width: 125%;
+        overflow-x: auto;
+        padding: 5px !important;
+    }
+    
+    .hand-range-container table {
+        min-width: 520px; /* 13*40px */
+    }
+}
+
+/* 移动端优化 - 按钮间距 */
+@media (max-width: 640px) {
+    .mobile-btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .mobile-btn-group > * {
+        width: 100%;
+        margin: 0 !important;
+    }
 }
