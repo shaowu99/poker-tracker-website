@@ -1,8 +1,8 @@
 class PokerCacheManager {
     constructor() {
         this.cachePrefix = 'poker_tracker_';
-        this.defaultCacheDuration = 10 * 60 * 1000; // 10分钟
-        this.statsCacheDuration = 30 * 60 * 1000; // 30分钟
+        this.defaultCacheDuration = 5 * 60 * 1000; // 5分钟
+        this.statsCacheDuration = 5 * 60 * 1000; // 5分钟，确保统计数据及时更新
     }
     
     // 生成缓存键
@@ -124,6 +124,7 @@ class PokerCacheManager {
         return this.withCache(
             cacheKey,
             async () => {
+                console.log('从数据库获取玩家统计数据...');
                 // 确保Supabase客户端已初始化
                 let attempts = 0;
                 const maxAttempts = 50; // 最多等待5秒 (50 * 100ms)
@@ -141,6 +142,8 @@ class PokerCacheManager {
                 const coreStats = await window.supabaseClient.getPlayerCoreStats(playerId);
                 const preflopStats = await window.supabaseClient.getPreflopStats(playerId);
                 const positionStats = await window.supabaseClient.getPositionStats(playerId);
+                
+                console.log('获取到统计数据:', { coreStats, preflopStats });
                 
                 return {
                     basicInfo,
@@ -232,7 +235,27 @@ class PokerCacheManager {
         );
     }
 
+    // 强制刷新特定玩家的所有统计数据
+    async function forceRefreshPlayerStats(playerId) {
+        // 清除所有相关缓存
+        this.clearCache('player_stats', playerId);
+        this.clearCache('recent_hands', playerId, 20);
+        this.clearCache('hand_range_data', playerId);
+        
+        // 重新获取最新数据
+        const stats = await this.getPlayerStats(playerId, true); // 强制刷新
+        const recentHands = await this.getPlayerRecentHands(playerId, 20);
+        const handRangeData = await this.getPlayerHandRangeData(playerId);
+        
+        return {
+            stats,
+            recentHands,
+            handRangeData
+        };
+    }
+
     // 将函数添加到缓存管理器实例上
     PokerCacheManager.prototype.getPlayerHandRangeData = getPlayerHandRangeData;
+    PokerCacheManager.prototype.forceRefreshPlayerStats = forceRefreshPlayerStats;
 
 window.pokerCache = new PokerCacheManager();

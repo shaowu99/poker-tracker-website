@@ -3,6 +3,7 @@ if (typeof window.supabaseInitialized === 'undefined') {
     window.supabaseInitialized = true;
     
     // Supabase 配置 - 请修改以下配置
+
     const SUPABASE_CONFIG = {
             // 在你的前端代码中，这样写：
             url: '__SUPABASE_URL__',
@@ -114,8 +115,46 @@ if (typeof window.supabaseInitialized === 'undefined') {
         }
     }
 
-    // 获取玩家核心统计数据
+    // 获取玩家核心统计数据（使用预计算统计表）
     async function getPlayerCoreStats(playerId) {
+        try {
+            const client = await ensureSupabase();
+            // 从预计算统计表获取数据
+            const { data, error } = await client
+                .from('player_stats_summary')
+                .select('total_hands, total_profit, wins, losses, win_rate, avg_profit_per_hand')
+                .eq('player_id', playerId)
+                .single();
+            
+            if (error) {
+                console.error('从预计算统计表获取数据失败，尝试使用原始方法:', error);
+                // 如果预计算表中没有数据，回退到原始方法
+                return await getPlayerCoreStatsFallback(playerId);
+            }
+            
+            if (data && data.total_hands !== null && data.total_hands !== undefined) {
+                // 预计算表中有数据，返回该数据
+                return {
+                    totalHands: data.total_hands,
+                    totalProfit: data.total_profit ? data.total_profit.toFixed(2) : '0.00',
+                    winRate: data.win_rate ? data.win_rate.toFixed(1) : '0.0',
+                    avgProfitPerHand: data.avg_profit_per_hand ? data.avg_profit_per_hand.toFixed(2) : '0.00',
+                    wins: data.wins || 0,
+                    losses: data.losses || 0
+                };
+            } else {
+                // 如果预计算表中没有数据，回退到原始方法
+                return await getPlayerCoreStatsFallback(playerId);
+            }
+        } catch (error) {
+            console.error('获取玩家核心统计数据失败:', error);
+            // 发生错误时回退到原始方法
+            return await getPlayerCoreStatsFallback(playerId);
+        }
+    }
+
+    // 回退方法：使用原始查询计算统计数据
+    async function getPlayerCoreStatsFallback(playerId) {
         try {
             const client = await ensureSupabase();
             // 获取总手数、总盈利、胜率
@@ -139,26 +178,83 @@ if (typeof window.supabaseInitialized === 'undefined') {
                 });
             }
             
-            const winRate = totalHands > 0 ? (wins / totalHands * 100).toFixed(1) : 0;
+            const winRate = totalHands > 0 ? (wins / totalHands * 100).toFixed(1) : '0.0';
             
             return {
                 totalHands,
                 totalProfit: totalProfit.toFixed(2),
                 winRate,
-                avgProfitPerHand: totalHands > 0 ? (totalProfit / totalHands).toFixed(2) : 0,
+                avgProfitPerHand: totalHands > 0 ? (totalProfit / totalHands).toFixed(2) : '0.00',
                 wins,
                 losses: totalHands - wins
             };
         } catch (error) {
-            console.error('获取玩家核心统计数据失败:', error);
-            return null;
+            console.error('回退方法获取玩家核心统计数据失败:', error);
+            return {
+                totalHands: 0,
+                totalProfit: '0.00',
+                winRate: '0.0',
+                avgProfitPerHand: '0.00',
+                wins: 0,
+                losses: 0
+            };
         }
     }
 
-    // 获取VPIP/PFR/3bet等翻前数据
+    // 获取VPIP/PFR/3bet等翻前数据（使用预计算统计表）
     async function getPreflopStats(playerId) {
         try {
             const client = await ensureSupabase();
+            // 从预计算统计表获取数据
+            const { data, error } = await client
+                .from('player_stats_summary')
+                .select('vpip, pfr, three_bet, aggression_index, total_hands as sampleHands')
+                .eq('player_id', playerId)
+                .single();
+            
+            if (error) {
+                console.error('从预计算统计表获取翻前数据失败，尝试使用原始方法:', error);
+                // 如果预计算表中没有数据，回退到原始方法
+                return await getPreflopStatsFallback(playerId);
+            }
+            
+            if (data && (data.vpip !== null || data.total_hands !== null)) {
+                return {
+                    vpip: data.vpip ? data.vpip.toFixed(1) : '0.0',
+                    pfr: data.pfr ? data.pfr.toFixed(1) : '0.0',
+                    threeBet: data.three_bet ? data.three_bet.toFixed(1) : '0.0',
+                    aggression: data.aggression_index ? data.aggression_index.toFixed(2) : '0.00',
+                    sampleHands: data.sampleHands !== null && data.sampleHands !== undefined ? data.sampleHands : 0
+                };
+            } else {
+                // 如果预计算表中没有数据，回退到原始方法
+                return await getPreflopStatsFallback(playerId);
+            }
+        } catch (error) {
+            console.error('获取翻前统计数据失败:', error);
+            // 发生错误时回退到原始方法
+            return await getPreflopStatsFallback(playerId);
+        }
+    }
+
+    // 回退方法：使用原始查询计算翻前统计数据
+    async function getPreflopStatsFallback(playerId) {
+        try {
+            const client = await ensureSupabase();
+            // 首先获取玩家的所有牌局ID，用于计算样本大小
+            const { data: gameData, error: gameError } = await client
+                .from('player_positions')
+                .select('game_id')
+                .eq('player_id', playerId);
+            
+            if (gameError) throw gameError;
+            
+            let totalGames = 0;
+            if (gameData && gameData.length > 0) {
+                totalGames = gameData.length;
+            }
+            
+            // 然后获取翻前动作数据
             const { data, error } = await client
                 .from('hand_actions')
                 .select('street, action_type, is_voluntary')
@@ -172,14 +268,9 @@ if (typeof window.supabaseInitialized === 'undefined') {
             let threeBetHands = 0; // 3bet的手牌数
             let totalPreflopHands = 0;
             
-            // 需要去重计算，因为每手牌可能有多个动作
-            const handActionsMap = new Map();
-            
             if (data && data.length > 0) {
                 // 按手牌分组统计
                 data.forEach(action => {
-                    // 这里简化处理，实际需要关联game_id
-                    // 注意：这是一个简化版本，实际需要更复杂的逻辑
                     if (action.is_voluntary) vpipHands++;
                     if (action.action_type === 'raise') pfrHands++;
                     // 3bet需要更复杂的逻辑检测，这里简化
@@ -188,24 +279,79 @@ if (typeof window.supabaseInitialized === 'undefined') {
                 totalPreflopHands = data.length;
             }
             
-            const vpip = totalPreflopHands > 0 ? (vpipHands / totalPreflopHands * 100).toFixed(1) : 0;
-            const pfr = totalPreflopHands > 0 ? (pfrHands / totalPreflopHands * 100).toFixed(1) : 0;
+            const vpip = totalGames > 0 ? (vpipHands / totalGames * 100).toFixed(1) : '0.0';
+            const pfr = totalGames > 0 ? (pfrHands / totalGames * 100).toFixed(1) : '0.0';
             
             return {
                 vpip,
                 pfr,
-                threeBet: threeBetHands > 0 ? (threeBetHands / totalPreflopHands * 100).toFixed(1) : 0,
-                aggression: pfrHands > 0 ? ((pfrHands + threeBetHands) / vpipHands).toFixed(2) : 0,
-                sampleHands: totalPreflopHands
+                threeBet: totalGames > 0 ? (threeBetHands / totalGames * 100).toFixed(1) : '0.0',
+                aggression: vpipHands > 0 ? ((pfrHands + threeBetHands) / vpipHands).toFixed(2) : '0.00',
+                sampleHands: totalGames  // 使用实际的游戏数量作为样本大小
             };
         } catch (error) {
-            console.error('获取翻前统计数据失败:', error);
-            return null;
+            console.error('回退方法获取翻前统计数据失败:', error);
+            return {
+                vpip: '0.0',
+                pfr: '0.0',
+                threeBet: '0.0',
+                aggression: '0.00',
+                sampleHands: 0
+            };
         }
     }
 
-    // 获取位置统计数据
+    // 获取位置统计数据（使用预计算统计表）
     async function getPositionStats(playerId) {
+        try {
+            const client = await ensureSupabase();
+            // 从预计算位置统计表获取数据
+            const { data, error } = await client
+                .from('player_position_stats')
+                .select('position, hands, profit, wins, avg_profit_per_hand, win_rate')
+                .eq('player_id', playerId);
+            
+            if (error) {
+                console.error('从预计算位置统计表获取数据失败，尝试使用原始方法:', error);
+                // 如果预计算表中没有数据，回退到原始方法
+                return await getPositionStatsFallback(playerId);
+            }
+            
+            if (data && data.length > 0) {
+                // 转换数据格式
+                const positionStats = data.map(pos => ({
+                    position: pos.position,
+                    hands: pos.hands || 0,
+                    profit: pos.profit ? pos.profit.toFixed(2) : '0.00',
+                    winRate: pos.win_rate ? pos.win_rate.toFixed(1) : '0.0',
+                    avgProfit: pos.avg_profit_per_hand ? pos.avg_profit_per_hand.toFixed(2) : '0.00'
+                }));
+                
+                // 按标准位置顺序排序
+                const positionOrder = ['UTG', 'UTG+1', 'UTG+2', 'MP', 'MP+1', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
+                positionStats.sort((a, b) => {
+                    const aIndex = positionOrder.indexOf(a.position);
+                    const bIndex = positionOrder.indexOf(b.position);
+                    if (aIndex === -1 && bIndex === -1) return a.position.localeCompare(b.position);
+                    if (aIndex === -1) return 1;
+                    if (bIndex === -1) return -1;
+                    return aIndex - bIndex;
+                });
+                
+                return positionStats;
+            } else {
+                // 如果预计算表中没有数据，回退到原始方法
+                return await getPositionStatsFallback(playerId);
+            }
+        } catch (error) {
+            console.error('获取位置统计数据失败:', error);
+            // 发生错误时回退到原始方法
+            return await getPositionStatsFallback(playerId);
+        }
+    }
+
+    // 回退方法：使用原始查询计算位置统计数据
+    async function getPositionStatsFallback(playerId) {
         try {
             const client = await ensureSupabase();
             const { data, error } = await client
@@ -260,7 +406,7 @@ if (typeof window.supabaseInitialized === 'undefined') {
             
             return positionStats;
         } catch (error) {
-            console.error('获取位置统计数据失败:', error);
+            console.error('回退方法获取位置统计数据失败:', error);
             return [];
         }
     }

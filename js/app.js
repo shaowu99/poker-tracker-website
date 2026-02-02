@@ -238,7 +238,10 @@ async function loadPlayerData(playerId) {
 
 // 渲染玩家统计数据
 function renderPlayerStats(data) {
-    if (!data) return;
+    if (!data) {
+        console.error('没有数据可以渲染');
+        return;
+    }
     
     const container = document.getElementById('playerDataContainer');
     if (!container) return;
@@ -264,7 +267,7 @@ function renderPlayerStats(data) {
                 </div>
                 <div>
                     <p class="text-gray-400 text-sm">数据来源</p>
-                    <p class="text-lg">${data.coreStats?.sampleHands || 0} 手样本</p>
+                    <p class="text-lg">${data.coreStats && data.coreStats.totalHands !== undefined && data.coreStats.totalHands !== null && data.coreStats.totalHands > 0 ? data.coreStats.totalHands : (data.preflopStats && data.preflopStats.sampleHands !== undefined && data.preflopStats.sampleHands !== null && data.preflopStats.sampleHands > 0 ? data.preflopStats.sampleHands : 0)} 手样本</p>
                 </div>
             </div>
         </div>
@@ -272,8 +275,9 @@ function renderPlayerStats(data) {
     
     // 核心统计卡片（HUD风格）
     if (data.coreStats) {
-        const profitColor = data.coreStats.totalProfit >= 0 ? 'text-green-400' : 'text-red-400';
-        const profitIcon = data.coreStats.totalProfit >= 0 ? '📈' : '📉';
+        console.log('渲染核心统计数据:', data.coreStats);
+        const profitColor = parseFloat(data.coreStats.totalProfit) >= 0 ? 'text-green-400' : 'text-red-400';
+        const profitIcon = parseFloat(data.coreStats.totalProfit) >= 0 ? '📈' : '📉';
         
         html += `
             <div class="bg-gray-800 rounded-2xl p-6 mb-6 border border-gray-700">
@@ -281,7 +285,7 @@ function renderPlayerStats(data) {
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                     <div class="text-center p-4 bg-gray-900 rounded-xl">
                         <p class="text-gray-400 text-sm">总手数</p>
-                        <p class="text-2xl font-bold">${data.coreStats.totalHands.toLocaleString()}</p>
+                        <p class="text-2xl font-bold">${(data.coreStats.totalHands || 0).toLocaleString()}</p>
                     </div>
                     <div class="text-center p-4 bg-gray-900 rounded-xl">
                         <p class="text-gray-400 text-sm">总盈利(BB)</p>
@@ -310,12 +314,13 @@ function renderPlayerStats(data) {
     
     // 翻前统计卡片（专业HUD数据）
     if (data.preflopStats) {
-        const vpipClass = getStatClass(data.preflopStats.vpip, 18, 25);
-        const pfrClass = getStatClass(data.preflopStats.pfr, 12, 18);
+        console.log('渲染翻前统计数据:', data.preflopStats);
+        const vpipClass = getStatClass(parseFloat(data.preflopStats.vpip), 18, 25);
+        const pfrClass = getStatClass(parseFloat(data.preflopStats.pfr), 12, 18);
         
         html += `
             <div class="bg-gray-800 rounded-2xl p-6 mb-6 border border-gray-700">
-                <h3 class="text-xl font-bold mb-4">翻前统计 (${data.preflopStats.sampleHands}手样本)</h3>
+                <h3 class="text-xl font-bold mb-4">翻前统计 (${data.preflopStats.sampleHands || 0}手样本)</h3>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="text-center p-4 bg-gray-900 rounded-xl">
                         <p class="text-gray-400 text-sm">VPIP</p>
@@ -342,7 +347,7 @@ function renderPlayerStats(data) {
         `;
     }
     
-    container.innerHTML += html;
+    container.innerHTML = html;
 }
 
     // 根据数值获取CSS类（用于HUD颜色编码）
@@ -660,6 +665,7 @@ async function refreshData() {
         // 清除缓存
         window.pokerCache.clearCache('player_stats', currentPlayer.id);
         window.pokerCache.clearCache('recent_hands', currentPlayer.id, 20);
+        window.pokerCache.clearCache('hand_range_data', currentPlayer.id);
         
         // 重新加载数据
         await loadPlayerData(currentPlayer.id);
@@ -1187,6 +1193,57 @@ async function getPlayerPositionStatsByTable(playerId, tableId) {
     }
 }
 
+// 手动更新玩家统计
+async function updatePlayerStats() {
+    if (!currentPlayer || isLoading) return;
+    
+    showLoading('正在更新玩家统计...');
+    
+    try {
+        // 调用后端函数更新统计
+        const client = await window.supabaseClient.ensureSupabase();
+        
+        // 通过 Supabase Edge Function 或 RPC 调用更新统计的函数
+        // 这里我们直接调用数据库函数
+        const { data, error } = await client.rpc('update_player_stats', {
+            p_player_id: currentPlayer.id
+        });
+        
+        if (error) {
+            console.error('更新玩家总体统计失败:', error);
+            // 尝试更新位置统计作为备选
+            try {
+                await client.rpc('update_player_position_stats', {
+                    p_player_id: currentPlayer.id
+                });
+            } catch (posError) {
+                console.error('更新位置统计也失败:', posError);
+            }
+        }
+        
+        // 强制清除所有相关缓存
+        window.pokerCache.clearCache('player_stats', currentPlayer.id);
+        window.pokerCache.clearCache('recent_hands', currentPlayer.id, 20);
+        window.pokerCache.clearCache('hand_range_data', currentPlayer.id);
+        
+        // 额外延迟确保数据库更新完成
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // 重新加载数据
+        await loadPlayerData(currentPlayer.id);
+        
+        // 显示成功消息
+        showToast('玩家统计更新成功！', 'success');
+        
+    } catch (error) {
+        console.error('更新玩家统计失败:', error);
+        showToast('更新失败，请重试', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
 // 导出函数供HTML调用
 window.initPlayerPage = initPlayerPage;
 window.refreshData = refreshData;
+window.updatePlayerStats = updatePlayerStats;

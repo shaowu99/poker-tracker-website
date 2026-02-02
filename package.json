@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "init-stats": "echo '请在数据库中运行: SELECT update_all_player_stats();'"
   },
   "dependencies": {
     "@playwright/test": "^1.58.1",
