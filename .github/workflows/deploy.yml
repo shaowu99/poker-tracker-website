@@ -1,0 +1,51 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ "main" ] # 或 master
+
+permissions:
+  contents: write # 允许工作流写入内容（创建gh-pages分支）
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Debug - List All Files
+        run: find . -type f -name "*.js" -o -name "*.html" | head -20
+
+      - name: Replace Supabase Secrets
+        env: # 将Secrets设为环境变量，便于在脚本中使用
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo "Supabase URL length: ${#SUPABASE_URL}"
+          echo "Supabase Key length: ${#SUPABASE_KEY}"
+          
+          # 检查并替换JS文件
+          if find . -type f -name '*.js' -exec grep -l '__SUPABASE_URL__\|__SUPABASE_ANON_KEY__' {} \;; then
+            echo "Found placeholders in JS files, replacing..."
+            find . -type f -name '*.js' -exec sed -i "s|__SUPABASE_URL__|$SUPABASE_URL|g; s|__SUPABASE_ANON_KEY__|$SUPABASE_KEY|g" {} \;
+          else
+            echo "Warning: No JS files with placeholders found."
+          fi
+          
+          # 检查并替换HTML文件
+          if find . -type f -name '*.html' -exec grep -l '__SUPABASE_URL__\|__SUPABASE_ANON_KEY__' {} \;; then
+            echo "Found placeholders in HTML files, replacing..."
+            find . -type f -name '*.html' -exec sed -i "s|__SUPABASE_URL__|$SUPABASE_URL|g; s|__SUPABASE_ANON_KEY__|$SUPABASE_KEY|g" {} \;
+          else
+            echo "Warning: No HTML files with placeholders found."
+          fi
+
+      - name: Deploy to gh-pages Branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: . # 发布根目录下的所有文件
+          force_orphan: true # 确保gh-pages分支只保留最新提交，历史干净
+
+          
