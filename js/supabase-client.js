@@ -208,23 +208,23 @@ if (typeof window.supabaseInitialized === 'undefined') {
             // 从预计算统计表获取数据
             const { data, error } = await client
                 .from('player_stats_summary')
-                .select('vpip, pfr, three_bet, aggression_index, total_hands as sampleHands')
+                .select('vpip, pfr, three_bet, aggression_index, total_hands')
                 .eq('player_id', playerId)
                 .single();
-            
+
             if (error) {
                 console.error('从预计算统计表获取翻前数据失败，尝试使用原始方法:', error);
                 // 如果预计算表中没有数据，回退到原始方法
                 return await getPreflopStatsFallback(playerId);
             }
-            
+
             if (data && (data.vpip !== null || data.total_hands !== null)) {
                 return {
                     vpip: data.vpip ? data.vpip.toFixed(1) : '0.0',
                     pfr: data.pfr ? data.pfr.toFixed(1) : '0.0',
                     threeBet: data.three_bet ? data.three_bet.toFixed(1) : '0.0',
                     aggression: data.aggression_index ? data.aggression_index.toFixed(2) : '0.00',
-                    sampleHands: data.sampleHands !== null && data.sampleHands !== undefined ? data.sampleHands : 0
+                    sampleHands: data.total_hands !== null && data.total_hands !== undefined ? data.total_hands : 0
                 };
             } else {
                 // 如果预计算表中没有数据，回退到原始方法
