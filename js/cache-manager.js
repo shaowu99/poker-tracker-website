@@ -92,24 +92,11 @@ class PokerCacheManager {
         return stats;
     }
     
-    // 缓存包装函数
+    // 缓存包装函数（已禁用缓存，直接从数据库获取）
     async withCache(cacheKey, fetchFunction, duration = null) {
-        // 尝试从缓存获取
-        const cached = this.getCachedData(cacheKey);
-        if (cached !== null) {
-            console.log(`使用缓存: ${cacheKey}`);
-            return cached;
-        }
-        
-        // 从源获取数据
-        console.log(`缓存未命中，获取数据: ${cacheKey}`);
+        // 直接从源获取数据，不使用缓存
+        console.log(`直接从数据库获取数据: ${cacheKey}`);
         const data = await fetchFunction();
-        
-        // 缓存结果
-        if (data !== null && data !== undefined) {
-            this.setCachedData(cacheKey, data, duration);
-        }
-        
         return data;
     }
     

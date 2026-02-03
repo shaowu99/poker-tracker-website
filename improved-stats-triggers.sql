@@ -95,21 +95,37 @@ BEGIN
 
     -- 计算VPIP - 自愿投入底池率
     SELECT 
-      LEAST(COALESCE(COUNT(DISTINCT ha.game_id) * 100.0 / NULLIF(total_hands_count, 0), 0), 999.99)
-    INTO vpip_calc
-    FROM hand_actions ha
-    WHERE ha.player_id = p_player_id 
-      AND ha.street = 'preflop' 
-      AND ha.is_voluntary = true;
+      LEAST(COALESCE(
+        (SELECT COUNT(DISTINCT ha.game_id)
+         FROM hand_actions ha
+         WHERE ha.player_id = p_player_id 
+           AND ha.street = 'preflop' 
+           AND ha.action_type IN ('call', 'bet', 'raise', 'all_in')
+           AND EXISTS (
+             SELECT 1 FROM player_positions pp
+             WHERE pp.player_id = ha.player_id
+               AND pp.game_id = ha.game_id
+           )
+        ) * 100.0 / NULLIF(total_hands_count, 0), 
+      0), 999.99)
+    INTO vpip_calc;
 
     -- 计算PFR - 翻前加注率
     SELECT 
-      LEAST(COALESCE(COUNT(DISTINCT ha.game_id) * 100.0 / NULLIF(total_hands_count, 0), 0), 999.99)
-    INTO pfr_calc
-    FROM hand_actions ha
-    WHERE ha.player_id = p_player_id 
-      AND ha.street = 'preflop' 
-      AND ha.action_type = 'raise';
+      LEAST(COALESCE(
+        (SELECT COUNT(DISTINCT ha.game_id)
+         FROM hand_actions ha
+         WHERE ha.player_id = p_player_id 
+           AND ha.street = 'preflop' 
+           AND ha.action_type = 'raise'
+           AND EXISTS (
+             SELECT 1 FROM player_positions pp
+             WHERE pp.player_id = ha.player_id
+               AND pp.game_id = ha.game_id
+           )
+        ) * 100.0 / NULLIF(total_hands_count, 0), 
+      0), 999.99)
+    INTO pfr_calc;
 
     -- 暂时简化3bet计算
     three_bet_calc := 0;
