@@ -621,8 +621,7 @@ function getGridPosition(holeCards) {
     
     const ranks = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
     
-    // 处理带有花色符号的格式，如 "8♠, J♣"
-    // 首先尝试按逗号和空格分割
+    // 处理带有花色符号的格式，如 "8♠, J♣" 或 "10♠, J♣"
     let card1Rank = '';
     let card2Rank = '';
     let isSuited = false;
@@ -636,22 +635,35 @@ function getGridPosition(holeCards) {
         // 按逗号分割
         const parts = holeCards.split(',');
         if (parts.length >= 2) {
-            // 提取第一张牌的牌面
+            // 提取第一张牌的牌面和花色
             const card1 = parts[0].trim();
-            card1Rank = card1[0].toUpperCase();
-            
-            // 提取第二张牌的牌面
             const card2 = parts[1].trim();
-            card2Rank = card2[0].toUpperCase();
             
-            // 检查是否同花
-            const suit1 = card1.match(/[♠♥♦♣]/);
-            const suit2 = card2.match(/[♠♥♦♣]/);
-            if (suit1 && suit2 && suit1[0] === suit2[0]) {
-                isSuited = true;
+            // 使用正则表达式提取牌面和花色
+            // 匹配模式：牌面(可能是T或10) + 花色符号
+            const card1Match = card1.match(/^(10|[A,K,Q,J,T,2-9])([♠♥♦♣])/);
+            const card2Match = card2.match(/^(10|[A,K,Q,J,T,2-9])([♠♥♦♣])/);
+            
+            if (card1Match && card2Match) {
+                // 提取牌面，将10转换为T
+                card1Rank = card1Match[1] === '10' ? 'T' : card1Match[1].toUpperCase();
+                card2Rank = card2Match[1] === '10' ? 'T' : card2Match[1].toUpperCase();
+                
+                // 检查是否同花
+                const suit1 = card1Match[2];
+                const suit2 = card2Match[2];
+                if (suit1 === suit2) {
+                    isSuited = true;
+                }
+                
+                console.log(`解析结果: ${card1Rank}${suit1}, ${card2Rank}${suit2}, 同花: ${isSuited}`);
+            } else {
+                console.log(`花色符号格式解析失败: "${card1}", "${card2}"`);
+                return { row: -1, col: -1 };
             }
-            
-            console.log(`解析结果: ${card1Rank}${suit1 ? suit1[0] : ''}, ${card2Rank}${suit2 ? suit2[0] : ''}, 同花: ${isSuited}`);
+        } else {
+            console.log(`花色符号格式不完整，需要逗号分隔的两张牌`);
+            return { row: -1, col: -1 };
         }
     } else {
         // 原有的解析逻辑，处理标准格式如 "AKs", "AKo", "AK"
