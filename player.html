@@ -72,6 +72,55 @@
             <!-- 手牌数据将通过JS动态填充 -->
         </div>
         
+        <!-- 手牌范围网格容器 -->
+        <div id="handRangeGridContainer" class="max-w-6xl mx-auto mt-6">
+            <div class="bg-gray-800 rounded-2xl p-6 mb-6 border border-gray-700">
+                <h3 class="text-xl font-bold mb-4">手牌范围分析</h3>
+                <div class="overflow-x-auto">
+                    <div id="handRangeGrid">
+                        <!-- 手牌范围网格将通过JS动态填充 -->
+                    </div>
+                </div>
+                <div class="mt-4 text-sm text-gray-400">
+                    <p class="mb-2">颜色说明：</p>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 bg-red-600 rounded"></span>
+                            <span class="text-xs">加注</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 bg-green-600 rounded"></span>
+                            <span class="text-xs">Limp/过牌</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 bg-blue-600 rounded"></span>
+                            <span class="text-xs">跟注</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 bg-gray-700 rounded"></span>
+                            <span class="text-xs">无数据</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-2">混合动作：</p>
+                    <div class="grid grid-cols-1 gap-1">
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 rounded" style="background: repeating-linear-gradient(45deg, #dc2626, #dc2626 2px, #16a34a 2px, #16a34a 4px);"></span>
+                            <span class="text-xs">加注 + Limp</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 rounded" style="background: repeating-linear-gradient(45deg, #dc2626, #dc2626 2px, #2563eb 2px, #2563eb 4px);"></span>
+                            <span class="text-xs">加注 + 跟注</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 rounded" style="background: repeating-linear-gradient(45deg, #16a34a, #16a34a 2px, #2563eb 2px, #2563eb 4px);"></span>
+                            <span class="text-xs">Limp + 跟注</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">鼠标悬停查看详细数据和百分比</p>
+                </div>
+            </div>
+        </div>
+        
         <!-- 数据说明 -->
         <div class="max-w-6xl mx-auto mt-8 sm:mt-12">
             <div class="bg-gray-800 rounded-2xl p-4 sm:p-6 border border-gray-700">

@@ -207,16 +207,42 @@ class PokerCacheManager {
                 // 确保Supabase客户端可用
                 let attempts = 0;
                 const maxAttempts = 50;
-                while ((!window.supabaseClient || typeof window.supabaseClient.getPlayerHandRangeData !== 'function') && attempts < maxAttempts) {
+                while ((!window.supabaseClient || typeof window.supabaseClient.ensureSupabase !== 'function') && attempts < maxAttempts) {
                     await new Promise(resolve => setTimeout(resolve, 100));
                     attempts++;
                 }
                 
-                if (!window.supabaseClient || typeof window.supabaseClient.getPlayerHandRangeData !== 'function') {
-                    throw new Error('Supabase客户端未能初始化或getPlayerHandRangeData函数不可用');
+                if (!window.supabaseClient || typeof window.supabaseClient.ensureSupabase !== 'function') {
+                    throw new Error('Supabase客户端未能初始化');
                 }
                 
-                return await window.supabaseClient.getPlayerHandRangeData(playerId);
+                // 获取showdowns数据
+                const showdownsData = await window.supabaseClient.getPlayerHandRangeData(playerId);
+                
+                // 获取玩家在preflop阶段的动作数据
+                const client = await window.supabaseClient.ensureSupabase();
+                const { data: handActionsData, error: actionsError } = await client
+                    .from('hand_actions')
+                    .select(`
+                        game_id,
+                        action_type,
+                        street
+                    `)
+                    .eq('player_id', playerId)
+                    .eq('street', 'preflop'); // 只获取翻前动作
+
+                if (actionsError) throw actionsError;
+                
+                // 合并数据 - 将动作信息添加到showdowns数据中
+                const mergedData = showdownsData.map(showdown => {
+                    const relatedAction = handActionsData.find(action => action.game_id === showdown.game_id);
+                    return {
+                        ...showdown,
+                        action_type: relatedAction ? relatedAction.action_type : ''
+                    };
+                });
+                
+                return mergedData;
             },
             this.defaultCacheDuration
         );

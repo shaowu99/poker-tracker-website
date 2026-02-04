@@ -425,10 +425,18 @@ function renderRecentHands(hands) {
 }
 // 渲染手牌范围网格
 function renderHandRangeGrid(data) {
-    if (!data) return;
+    if (!data) {
+        console.log('没有手牌范围数据可以渲染');
+        return;
+    }
     
     const container = document.getElementById('handRangeGrid');
-    if (!container) return;
+    if (!container) {
+        console.log('找不到手牌范围网格容器');
+        return;
+    }
+    
+    console.log('渲染手牌范围网格，数据量:', data.length);
     
     // 创建2D网格数据结构 (13x13)
     const grid = [];
@@ -440,29 +448,73 @@ function renderHandRangeGrid(data) {
     }
     
     // 填充网格数据
+    console.log('开始填充网格数据，总数据量:', data.length);
+    console.log('前3条数据样本:', data.slice(0, 3));
+    
+    let processedHands = 0;
+    let skippedHands = 0;
+    let invalidPositionHands = 0;
+    
     for (const hand of data) {
+        processedHands++;
+        
+        // 打印每条手牌数据的详细信息
+        if (processedHands <= 5) {
+            console.log(`手牌 ${processedHands}:`, {
+                hole_cards: hand.hole_cards,
+                action_type: hand.action_type,
+                game_id: hand.game_id
+            });
+        }
+        
         const { row, col } = getGridPosition(hand.hole_cards);
+        console.log(`手牌 ${hand.hole_cards} -> 网格位置: [${row}, ${col}]`);
+        
         if (row !== -1 && col !== -1) {
             // 确保索引在范围内
             if (row >= 0 && row < 13 && col >= 0 && col < 13) {
                 // 根据动作类型更新计数
                 if (hand.action_type === 'raise' || hand.action_type === '3bet' || hand.action_type === '4bet' || hand.action_type === 'all_in') {
                     grid[row][col].raises += 1;
+                    console.log(`加注: ${hand.hole_cards} -> [${row}, ${col}]`);
                 } else if (hand.action_type === 'call') {
                     grid[row][col].calls += 1;
+                    console.log(`跟注: ${hand.hole_cards} -> [${row}, ${col}]`);
                 } else if (hand.action_type === 'fold') {
                     grid[row][col].limps += 1;
+                    console.log(`弃牌: ${hand.hole_cards} -> [${row}, ${col}]`);
                 } else if (hand.action_type === '') {
                     // 没有关联的动作，可能是limp
                     grid[row][col].limps += 1;
+                    console.log(`无动作(视为limp): ${hand.hole_cards} -> [${row}, ${col}]`);
                 } else {
                     // 其他情况也视为limp（没有加注前的跟注或开局跟注）
                     grid[row][col].limps += 1;
+                    console.log(`其他动作(${hand.action_type})视为limp: ${hand.hole_cards} -> [${row}, ${col}]`);
                 }
                 grid[row][col].total += 1;
+            } else {
+                invalidPositionHands++;
+                console.log(`无效网格位置: ${hand.hole_cards} -> [${row}, ${col}] 超出范围`);
+            }
+        } else {
+            skippedHands++;
+            console.log(`跳过无效手牌: ${hand.hole_cards} -> [${row}, ${col}]`);
+        }
+    }
+    
+    console.log(`网格数据填充完成: 处理${processedHands}手, 跳过${skippedHands}手, 无效位置${invalidPositionHands}手`);
+    
+    // 统计网格中有数据的格子
+    let filledCells = 0;
+    for (let i = 0; i < 13; i++) {
+        for (let j = 0; j < 13; j++) {
+            if (grid[i][j].total > 0) {
+                filledCells++;
             }
         }
     }
+    console.log(`网格中有数据的格子数: ${filledCells}/169`);
     
     // 生成网格HTML - 添加CSS样式以确保表格为正方形
     let html = `
@@ -493,10 +545,25 @@ function renderHandRangeGrid(data) {
                 const raiseRatio = cell.raises / cell.total;
                 const callRatio = cell.calls / cell.total;
                 
-                if (raiseRatio > 0 && limpRatio > 0) {
-                    // 混合颜色 - 使用渐变来显示raise(红)和limp(绿)的比例
-                    const raisePercent = Math.round(raiseRatio * 100);
-                    cellStyle += `background: linear-gradient(135deg, #dc2626 ${raisePercent}%, #16a34a ${raisePercent}%);`;
+                // 多种动作混合的情况
+                if (raiseRatio > 0 && (limpRatio > 0 || callRatio > 0)) {
+                    // 有加注和其他动作 - 使用条纹或渐变显示混合
+                    if (limpRatio > 0 && callRatio > 0) {
+                        // 三种动作都有 - 使用复杂渐变
+                        const raisePercent = Math.round(raiseRatio * 100);
+                        const limpPercent = Math.round(limpRatio * 100);
+                        cellStyle += `background: conic-gradient(from 45deg, #dc2626 0deg ${raisePercent * 3.6}deg, #16a34a ${raisePercent * 3.6}deg ${(raisePercent + limpPercent) * 3.6}deg, #2563eb ${(raisePercent + limpPercent) * 3.6}deg 360deg);`;
+                    } else if (limpRatio > 0) {
+                        // 加注和limp混合 - 使用条纹
+                        const raisePercent = Math.round(raiseRatio * 100);
+                        cellStyle += `background: repeating-linear-gradient(45deg, #dc2626, #dc2626 10px, #16a34a 10px, #16a34a 20px);`;
+                    } else {
+                        // 加注和跟注混合 - 使用条纹
+                        cellStyle += `background: repeating-linear-gradient(45deg, #dc2626, #dc2626 10px, #2563eb 10px, #2563eb 20px);`;
+                    }
+                } else if (limpRatio > 0 && callRatio > 0) {
+                    // limp和跟注混合 - 使用条纹
+                    cellStyle += `background: repeating-linear-gradient(45deg, #16a34a, #16a34a 10px, #2563eb 10px, #2563eb 20px);`;
                 } else if (raiseRatio > 0) {
                     // 主要是加注 - 红色
                     cellStyle += 'background-color: #dc2626;'; // red-600
@@ -513,7 +580,28 @@ function renderHandRangeGrid(data) {
                 cellStyle += 'background-color: #1f2937;'; // gray-800
             }
             
-            html += `<td style="${cellStyle}" title="${getHandNotation(i, j)}: ${cell.total}手 (R:${cell.raises}, L:${cell.limps}, C:${cell.calls})">${getHandNotation(i, j)}</td>`;
+            // 创建详细的工具提示
+            let tooltipText = `${getHandNotation(i, j)}: ${cell.total}手`;
+            if (cell.raises > 0) tooltipText += ` | 加注:${cell.raises}`;
+            if (cell.limps > 0) tooltipText += ` | Limp:${cell.limps}`;
+            if (cell.calls > 0) tooltipText += ` | 跟注:${cell.calls}`;
+            
+            // 添加动作分布百分比
+            if (cell.total > 0) {
+                const raisePercent = Math.round((cell.raises / cell.total) * 100);
+                const limpPercent = Math.round((cell.limps / cell.total) * 100);
+                const callPercent = Math.round((cell.calls / cell.total) * 100);
+                
+                if (raisePercent > 0 || limpPercent > 0 || callPercent > 0) {
+                    tooltipText += ` (`;
+                    if (raisePercent > 0) tooltipText += `加注${raisePercent}%`;
+                    if (limpPercent > 0) tooltipText += `${raisePercent > 0 ? ', ' : ''}Limp${limpPercent}%`;
+                    if (callPercent > 0) tooltipText += `${raisePercent > 0 || limpPercent > 0 ? ', ' : ''}跟注${callPercent}%`;
+                    tooltipText += `)`;
+                }
+            }
+            
+            html += `<td style="${cellStyle}" title="${tooltipText}">${getHandNotation(i, j)}</td>`;
         }
         html += '</tr>';
     }
@@ -524,15 +612,66 @@ function renderHandRangeGrid(data) {
 
 // 根据手牌获取网格位置
 function getGridPosition(holeCards) {
-    if (!holeCards || holeCards.length < 2) return { row: -1, col: -1 };
+    console.log(`解析手牌: "${holeCards}" (长度: ${holeCards ? holeCards.length : 'null'})`);
+    
+    if (!holeCards || holeCards.length < 2) {
+        console.log(`手牌格式无效: "${holeCards}"`);
+        return { row: -1, col: -1 };
+    }
     
     const ranks = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
-    // 提取前两个字符作为牌面（忽略花色）
-    const card1Rank = holeCards[0].toUpperCase();
-    const card2Rank = holeCards[1].toUpperCase();
+    
+    // 处理带有花色符号的格式，如 "8♠, J♣"
+    // 首先尝试按逗号和空格分割
+    let card1Rank = '';
+    let card2Rank = '';
+    let isSuited = false;
+    
+    // 检查是否包含花色符号
+    const hasSuitSymbols = /[♠♥♦♣]/.test(holeCards);
+    
+    if (hasSuitSymbols) {
+        console.log(`检测到花色符号格式`);
+        
+        // 按逗号分割
+        const parts = holeCards.split(',');
+        if (parts.length >= 2) {
+            // 提取第一张牌的牌面
+            const card1 = parts[0].trim();
+            card1Rank = card1[0].toUpperCase();
+            
+            // 提取第二张牌的牌面
+            const card2 = parts[1].trim();
+            card2Rank = card2[0].toUpperCase();
+            
+            // 检查是否同花
+            const suit1 = card1.match(/[♠♥♦♣]/);
+            const suit2 = card2.match(/[♠♥♦♣]/);
+            if (suit1 && suit2 && suit1[0] === suit2[0]) {
+                isSuited = true;
+            }
+            
+            console.log(`解析结果: ${card1Rank}${suit1 ? suit1[0] : ''}, ${card2Rank}${suit2 ? suit2[0] : ''}, 同花: ${isSuited}`);
+        }
+    } else {
+        // 原有的解析逻辑，处理标准格式如 "AKs", "AKo", "AK"
+        console.log(`使用标准格式解析`);
+        
+        // 提取前两个字符作为牌面（忽略花色）
+        card1Rank = holeCards[0].toUpperCase();
+        card2Rank = holeCards[1].toUpperCase();
+        
+        // 检查是否同花
+        if (holeCards.toLowerCase().includes('s') || (holeCards.length >= 4 && holeCards[2] === holeCards[3])) {
+            isSuited = true;
+        }
+    }
+    
+    console.log(`最终牌面: "${card1Rank}", "${card2Rank}", 同花: ${isSuited}`);
     
     // 确保是有效牌面
     if (!ranks.includes(card1Rank) || !ranks.includes(card2Rank)) {
+        console.log(`无效牌面: "${card1Rank}", "${card2Rank}"`);
         return { row: -1, col: -1 };
     }
     
@@ -541,20 +680,23 @@ function getGridPosition(holeCards) {
     
     // 对子：主对角线
     if (card1Rank === card2Rank) {
+        console.log(`对子: ${card1Rank}${card2Rank} -> [${rank1Index}, ${rank2Index}]`);
         return { row: rank1Index, col: rank2Index };
-    } 
+    }
     // 同花：上三角（row < col）
-    else if (holeCards.toLowerCase().includes('s') || (holeCards.length >= 4 && holeCards[2] === holeCards[3])) {
+    else if (isSuited) {
         // 确保同花牌位于上三角：较小的牌面值作为行，较大的作为列
         const minIndex = Math.min(rank1Index, rank2Index);
         const maxIndex = Math.max(rank1Index, rank2Index);
+        console.log(`同花: ${card1Rank}${card2Rank}s -> [${minIndex}, ${maxIndex}]`);
         return { row: minIndex, col: maxIndex };
-    } 
+    }
     // 非同花：下三角（row > col）
     else {
         // 确保非同花牌位于下三角：较大的牌面值作为行，较小的作为列
         const minIndex = Math.min(rank1Index, rank2Index);
         const maxIndex = Math.max(rank1Index, rank2Index);
+        console.log(`非同花: ${card1Rank}${card2Rank}o -> [${maxIndex}, ${minIndex}]`);
         return { row: maxIndex, col: minIndex };
     }
 }
