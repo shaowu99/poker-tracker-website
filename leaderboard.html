@@ -332,7 +332,13 @@
                 
                 row.innerHTML = `
                     <td class="py-4 px-4 font-bold">${player.rank}</td>
-                    <td class="py-4 px-4 font-medium">${player.playerName}</td>
+                    <td class="py-4 px-4 font-medium">
+                        <a href="https://shaowu99.github.io/poker-tracker-website/player.html?player=${encodeURIComponent(player.playerName)}"
+                           class="text-blue-400 hover:text-blue-300 hover:underline transition-colors"
+                           target="_blank">
+                            ${player.playerName}
+                        </a>
+                    </td>
                     <td class="py-4 px-4">${player.wins}</td>
                     <td class="py-4 px-4">${player.totalHands}</td>
                     <td class="py-4 px-4">${player.winRate}%</td>
