@@ -537,7 +537,7 @@ function renderHandRangeGrid(data) {
         html += `<th style="width: 40px; height: 40px; border: 1px solid #4b5563; text-align: center; vertical-align: middle; font-size: 0.75rem; color: #d1d5db;">${ranks[i]}</th>`;
         for (let j = 0; j < 13; j++) {
             const cell = grid[i][j];
-            let cellStyle = 'width: 40px; height: 40px; border: 1px solid #4b5563; text-align: center; vertical-align: middle; font-size: 0.65rem; ';
+            let cellStyle = 'width: 40px; height: 40px; border: 1px solid #4b5563; text-align: center; vertical-align: middle; font-size: 0.65rem; position: relative; padding: 2px;';
             
             if (cell.total > 0) {
                 // 计算各种动作的比例
@@ -545,63 +545,70 @@ function renderHandRangeGrid(data) {
                 const raiseRatio = cell.raises / cell.total;
                 const callRatio = cell.calls / cell.total;
                 
-                // 多种动作混合的情况
-                if (raiseRatio > 0 && (limpRatio > 0 || callRatio > 0)) {
-                    // 有加注和其他动作 - 使用条纹或渐变显示混合
-                    if (limpRatio > 0 && callRatio > 0) {
-                        // 三种动作都有 - 使用复杂渐变
-                        const raisePercent = Math.round(raiseRatio * 100);
-                        const limpPercent = Math.round(limpRatio * 100);
-                        cellStyle += `background: conic-gradient(from 45deg, #dc2626 0deg ${raisePercent * 3.6}deg, #16a34a ${raisePercent * 3.6}deg ${(raisePercent + limpPercent) * 3.6}deg, #2563eb ${(raisePercent + limpPercent) * 3.6}deg 360deg);`;
-                    } else if (limpRatio > 0) {
-                        // 加注和limp混合 - 使用条纹
-                        const raisePercent = Math.round(raiseRatio * 100);
-                        cellStyle += `background: repeating-linear-gradient(45deg, #dc2626, #dc2626 10px, #16a34a 10px, #16a34a 20px);`;
-                    } else {
-                        // 加注和跟注混合 - 使用条纹
-                        cellStyle += `background: repeating-linear-gradient(45deg, #dc2626, #dc2626 10px, #2563eb 10px, #2563eb 20px);`;
+                // 创建水平条形图HTML
+                let barHtml = '';
+                
+                if (raiseRatio > 0 || limpRatio > 0 || callRatio > 0) {
+                    barHtml += `<div class="action-bar">`;
+                    
+                    // 按照加注、Limp、跟注的顺序添加条形
+                    if (raiseRatio > 0) {
+                        const raiseWidth = Math.round(raiseRatio * 100);
+                        barHtml += `<div class="action-segment" style="background-color: #dc2626; width: ${raiseWidth}%;" title="加注: ${cell.raises}手 (${raiseWidth}%)"></div>`;
                     }
-                } else if (limpRatio > 0 && callRatio > 0) {
-                    // limp和跟注混合 - 使用条纹
-                    cellStyle += `background: repeating-linear-gradient(45deg, #16a34a, #16a34a 10px, #2563eb 10px, #2563eb 20px);`;
-                } else if (raiseRatio > 0) {
-                    // 主要是加注 - 红色
-                    cellStyle += 'background-color: #dc2626;'; // red-600
-                } else if (limpRatio > 0) {
-                    // 主要是limp - 绿色
-                    cellStyle += 'background-color: #16a34a;'; // green-600
-                } else if (callRatio > 0) {
-                    // 主要是跟注 - 蓝色
-                    cellStyle += 'background-color: #2563eb;'; // blue-600
-                } else {
-                    cellStyle += 'background-color: #374151;'; // gray-700
+                    if (limpRatio > 0) {
+                        const limpWidth = Math.round(limpRatio * 100);
+                        barHtml += `<div class="action-segment" style="background-color: #16a34a; width: ${limpWidth}%;" title="Limp: ${cell.limps}手 (${limpWidth}%)"></div>`;
+                    }
+                    if (callRatio > 0) {
+                        const callWidth = Math.round(callRatio * 100);
+                        barHtml += `<div class="action-segment" style="background-color: #2563eb; width: ${callWidth}%;" title="跟注: ${cell.calls}手 (${callWidth}%)"></div>`;
+                    }
+                    
+                    barHtml += '</div>';
                 }
+                
+                // 设置单元格背景色
+                if (raiseRatio > 0 && limpRatio === 0 && callRatio === 0) {
+                    // 纯加注 - 红色
+                    cellStyle += 'background-color: rgba(220, 38, 38, 0.2);'; // red-600 with opacity
+                } else if (limpRatio > 0 && raiseRatio === 0 && callRatio === 0) {
+                    // 纯limp - 绿色
+                    cellStyle += 'background-color: rgba(22, 163, 74, 0.2);'; // green-600 with opacity
+                } else if (callRatio > 0 && raiseRatio === 0 && limpRatio === 0) {
+                    // 纯跟注 - 蓝色
+                    cellStyle += 'background-color: rgba(37, 99, 235, 0.2);'; // blue-600 with opacity
+                } else {
+                    // 混合动作 - 灰色
+                    cellStyle += 'background-color: rgba(55, 65, 81, 0.3);'; // gray-700 with opacity
+                }
+                
+                // 创建详细的工具提示
+                let tooltipText = `${getHandNotation(i, j)}: ${cell.total}手`;
+                if (cell.raises > 0) tooltipText += ` | 加注:${cell.raises}`;
+                if (cell.limps > 0) tooltipText += ` | Limp:${cell.limps}`;
+                if (cell.calls > 0) tooltipText += ` | 跟注:${cell.calls}`;
+                
+                // 添加动作分布百分比
+                if (cell.total > 0) {
+                    const raisePercent = Math.round((cell.raises / cell.total) * 100);
+                    const limpPercent = Math.round((cell.limps / cell.total) * 100);
+                    const callPercent = Math.round((cell.calls / cell.total) * 100);
+                    
+                    if (raisePercent > 0 || limpPercent > 0 || callPercent > 0) {
+                        tooltipText += ` (`;
+                        if (raisePercent > 0) tooltipText += `加注${raisePercent}%`;
+                        if (limpPercent > 0) tooltipText += `${raisePercent > 0 ? ', ' : ''}Limp${limpPercent}%`;
+                        if (callPercent > 0) tooltipText += `${raisePercent > 0 || limpPercent > 0 ? ', ' : ''}跟注${callPercent}%`;
+                        tooltipText += `)`;
+                    }
+                }
+                
+                html += `<td style="${cellStyle}" title="${tooltipText}"><div style="position: relative; height: 100%; display: flex; flex-direction: column; justify-content: space-between;"><div style="font-size: 0.65rem; text-align: center; line-height: 1;">${getHandNotation(i, j)}</div>${barHtml}</div></td>`;
             } else {
                 cellStyle += 'background-color: #1f2937;'; // gray-800
+                html += `<td style="${cellStyle}">${getHandNotation(i, j)}</td>`;
             }
-            
-            // 创建详细的工具提示
-            let tooltipText = `${getHandNotation(i, j)}: ${cell.total}手`;
-            if (cell.raises > 0) tooltipText += ` | 加注:${cell.raises}`;
-            if (cell.limps > 0) tooltipText += ` | Limp:${cell.limps}`;
-            if (cell.calls > 0) tooltipText += ` | 跟注:${cell.calls}`;
-            
-            // 添加动作分布百分比
-            if (cell.total > 0) {
-                const raisePercent = Math.round((cell.raises / cell.total) * 100);
-                const limpPercent = Math.round((cell.limps / cell.total) * 100);
-                const callPercent = Math.round((cell.calls / cell.total) * 100);
-                
-                if (raisePercent > 0 || limpPercent > 0 || callPercent > 0) {
-                    tooltipText += ` (`;
-                    if (raisePercent > 0) tooltipText += `加注${raisePercent}%`;
-                    if (limpPercent > 0) tooltipText += `${raisePercent > 0 ? ', ' : ''}Limp${limpPercent}%`;
-                    if (callPercent > 0) tooltipText += `${raisePercent > 0 || limpPercent > 0 ? ', ' : ''}跟注${callPercent}%`;
-                    tooltipText += `)`;
-                }
-            }
-            
-            html += `<td style="${cellStyle}" title="${tooltipText}">${getHandNotation(i, j)}</td>`;
         }
         html += '</tr>';
     }
