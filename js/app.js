@@ -317,7 +317,7 @@ function renderPlayerStats(data) {
         console.log('渲染翻前统计数据:', data.preflopStats);
         const vpipClass = getStatClass(parseFloat(data.preflopStats.vpip), 18, 25);
         const pfrClass = getStatClass(parseFloat(data.preflopStats.pfr), 12, 18);
-        
+        const aggressionClass = getStatClass(parseFloat(data.preflopStats.aggression), 0.3, 0.6);
         html += `
             <div class="bg-gray-800 rounded-2xl p-6 mb-6 border border-gray-700">
                 <h3 class="text-xl font-bold mb-4">翻前统计 (${data.preflopStats.sampleHands || 0}手样本)</h3>
@@ -339,7 +339,7 @@ function renderPlayerStats(data) {
                     </div>
                     <div class="text-center p-4 bg-gray-900 rounded-xl">
                         <p class="text-gray-400 text-sm">Agg</p>
-                        <p class="text-3xl font-bold">${data.preflopStats.aggression}</p>
+                        <p class="text-3xl font-bold ${aggressionClass}">${data.preflopStats.aggression}</p>
                         <p class="text-xs text-gray-500 mt-1">激进指数</p>
                     </div>
                 </div>
